@@ -168,6 +168,7 @@ header {
   color: var(--muted);
   margin-bottom: 28px;
   font-style: italic;
+  display: none;
 }
 
 /* Drop zone */
