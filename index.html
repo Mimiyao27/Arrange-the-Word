@@ -13,10 +13,10 @@
   <body>
     <div class="wrapper">
       <header>
-        <!-- <div class="logo">
+        <div class="logo">
           <span>W</span><span>ORD</span><span>J</span><span>UMBLE</span>
         </div>
-        <p class="tagline">Drag · Drop · Decode</p> -->
+        <p class="tagline">Drag · Drop · Decode</p>
       </header>
 
       <div class="stats-bar">
@@ -43,7 +43,7 @@
         <div class="sentence-counter" id="sentenceCounter">
           SENTENCE 1 OF 10
         </div>
-        <!-- <div class="hint-label">💡 Hint</div> -->
+        <div class="hint-label">💡 Hint</div>
         <div class="hint-text" id="hintText">—</div>
 
         <div class="dropzone-label">📥 Build your sentence here</div>
@@ -165,23 +165,6 @@
           [a[i], a[j]] = [a[j], a[i]];
         }
         return a;
-      }
-
-      function loadSentence(idx) {
-        locked = false;
-        zoneWords = [];
-        const s = SENTENCES[idx];
-        poolWords = shuffle(s.words.map((w, i) => ({ word: w, id: `w${i}` })));
-
-        document.getElementById("hintText").textContent = s.hint;
-        document.getElementById("sentenceCounter").textContent =
-          `SENTENCE ${idx + 1} OF ${SENTENCES.length}`;
-        document.getElementById("roundVal").textContent = idx + 1;
-        setFeedback("", "");
-
-        renderPool();
-        renderZone();
-        updateProgress();
       }
 
       function renderPool() {
@@ -307,31 +290,6 @@
         ).element;
       }
 
-      function checkAnswer() {
-        if (locked || zoneWords.length === 0) return;
-        const correct = SENTENCES[currentIdx].words;
-        const attempt = zoneWords.map((w) => w.word);
-        const isCorrect = JSON.stringify(attempt) === JSON.stringify(correct);
-
-        if (isCorrect) {
-          score += 10;
-          answered++;
-          document.getElementById("scoreVal").textContent = score;
-          setFeedback("✅ Correct! Well done!", "show-correct");
-          dz.classList.add("correct");
-          locked = true;
-          renderZone(); // re-render as locked
-          setTimeout(() => {
-            dz.classList.remove("correct");
-            nextOrWin();
-          }, 1200);
-        } else {
-          setFeedback("❌ Not quite right — try again!", "show-wrong");
-          dz.classList.add("wrong");
-          setTimeout(() => dz.classList.remove("wrong"), 500);
-        }
-      }
-
       function clearZone() {
         if (locked) return;
         poolWords = [...poolWords, ...zoneWords];
@@ -367,18 +325,6 @@
           `Final Score: ${score} / ${SENTENCES.length * 10} points`;
       }
 
-      function restartGame() {
-        currentIdx = 0;
-        score = 0;
-        answered = 0;
-        document.getElementById("scoreVal").textContent = "0";
-        document.getElementById("gamePanel").style.display = "";
-        document.querySelector(".btn-row").style.display = "";
-        document.getElementById("feedback").style.display = "";
-        document.getElementById("winScreen").classList.remove("visible");
-        loadSentence(0);
-      }
-
       function setFeedback(msg, cls) {
         const el = document.getElementById("feedback");
         el.textContent = msg;
@@ -388,6 +334,63 @@
       function updateProgress() {
         const pct = (currentIdx / SENTENCES.length) * 100;
         document.getElementById("progressBar").style.width = pct + "%";
+      }
+
+      // Shuffle sentence order on every page load
+      let shuffledSentences = shuffle(SENTENCES);
+      const _origLoad = loadSentence;
+      function loadSentence(idx) {
+        locked = false;
+        zoneWords = [];
+        const s = shuffledSentences[idx];
+        poolWords = shuffle(s.words.map((w, i) => ({ word: w, id: `w${i}` })));
+        document.getElementById("hintText").textContent = s.hint;
+        document.getElementById("sentenceCounter").textContent =
+          `SENTENCE ${idx + 1} OF ${shuffledSentences.length}`;
+        document.getElementById("roundVal").textContent = idx + 1;
+        setFeedback("", "");
+        renderPool();
+        renderZone();
+        updateProgress();
+      }
+
+      // Override checkAnswer to use shuffledSentences
+      const _origCheck = checkAnswer;
+      function checkAnswer() {
+        if (locked || zoneWords.length === 0) return;
+        const correct = shuffledSentences[currentIdx].words;
+        const attempt = zoneWords.map((w) => w.word);
+        const isCorrect = JSON.stringify(attempt) === JSON.stringify(correct);
+        if (isCorrect) {
+          score += 10;
+          answered++;
+          document.getElementById("scoreVal").textContent = score;
+          setFeedback("✅ Correct! Well done!", "show-correct");
+          dz.classList.add("correct");
+          locked = true;
+          renderZone();
+          setTimeout(() => {
+            dz.classList.remove("correct");
+            nextOrWin();
+          }, 1200);
+        } else {
+          setFeedback("❌ Not quite right — try again!", "show-wrong");
+          dz.classList.add("wrong");
+          setTimeout(() => dz.classList.remove("wrong"), 500);
+        }
+      }
+
+      function restartGame() {
+        shuffledSentences = shuffle(SENTENCES); // re-shuffle on replay too
+        currentIdx = 0;
+        score = 0;
+        answered = 0;
+        document.getElementById("scoreVal").textContent = "0";
+        document.getElementById("gamePanel").style.display = "";
+        document.querySelector(".btn-row").style.display = "";
+        document.getElementById("feedback").style.display = "";
+        document.getElementById("winScreen").classList.remove("visible");
+        loadSentence(0);
       }
 
       // Init
